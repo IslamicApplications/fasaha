@@ -119,3 +119,10 @@ Generate audio with Google Cloud Text-to-Speech using the Modern Standard Arabic
 The generator saves its progress after every successful clip and reuses matching recordings on later runs. Both `public/audio/*.mp3` and `src/data/audioManifest.ts` must be included in deployment. A new voice generates new files rather than reusing the previous voice's clips. API generation uses your Google Cloud billing account; the preview is free of API calls.
 
 Options: `--limit 12`, `--voice ar-XA-Chirp3-HD-Kore`, `--all`, and `--include-phonetics`. Isolated letters and vowel samples are excluded by default; generate these only with `--include-phonetics` and review them with an Arabic speaker before publishing. Qur’anic recitation keeps its existing recorded audio; this generator does not synthesize Qur’anic verses. Grammar examples containing Latin annotations are skipped and keep browser playback.
+
+
+## Typing Arabic with a computer keyboard
+
+Arabic answer boxes in the writing studio, dictation studio, and Today’s Lesson map an English keyboard to the [Arabic 101 layout](https://learn.microsoft.com/en-us/msdn-files/resources/msdn/goglobal/keyboards/kbda1.html). Focus the answer box and type: `H` → ا, `F` → ب, `G` → ل, and `B` → لا. Each virtual key shows its English key and highlights while pressed.
+
+Hold Shift for vowel marks: `Shift + Q` → fatha, `Shift + E` → damma, `Shift + A` → kasra, `Shift + X` → sukun, and `Shift + backtick` → shaddah. Enter checks an answer; Shift + Enter inserts a new line. Use **Computer mapping: Off** to type normally. Existing Arabic input, composition, and Ctrl/Cmd shortcuts pass through normally. Virtual keys insert at the cursor and replace selected text; Backspace removes the selection or the previous character.

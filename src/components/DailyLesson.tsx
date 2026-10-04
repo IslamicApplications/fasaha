@@ -6,6 +6,7 @@ import { GRAMMAR_LESSONS } from '../data/grammarData';
 import { READING_PASSAGES } from '../data/readingData';
 import { CONVERSATION_DIALOGUES } from '../data/conversationData';
 import { AudioPlayerButton } from './AudioPlayerButton';
+import { useArabicKeyboard } from '../hooks/useArabicKeyboard';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { arabicAudio, calculateArabicMatchScore, createArabicSpeechRecognizer, normalizeArabicText } from '../utils/audio';
 import { calculateNextSRS, SRSItem } from '../utils/srs';
@@ -28,6 +29,7 @@ function loadSession(stats: UserStats): DailySession {
 export function DailyLesson({ stats, onComplete }: Props) {
   const [session, setSession] = useState<DailySession>(() => loadSession(stats));
   const [typed, setTyped] = useState('');
+  const keyboard = useArabicKeyboard(typed, setTyped, () => checkAnswer());
   const [choice, setChoice] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
   const [speechStatus, setSpeechStatus] = useState('');
@@ -140,10 +142,10 @@ export function DailyLesson({ stats, onComplete }: Props) {
         {step.kind === 'conversation' && <p className="text-center text-sm text-slate-500">{step.english}</p>}
         {step.arabic && <AudioPlayerButton text={step.arabic} title={step.kind === 'dictation' ? 'Listen to the sentence' : undefined} label={step.kind === 'dictation' ? 'Listen to the sentence' : 'Listen'} variant="primary" />}
         {step.options ? <div className="grid sm:grid-cols-2 gap-3">{step.options.map((option, index) => <button type="button" key={index} disabled={!!result} aria-pressed={choice === index} onClick={() => setChoice(index)} className={`p-4 rounded-2xl border text-sm ${choice === index ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100' : 'border-slate-200 dark:border-slate-700'}`}>{option}</button>)}</div>
-          : <div className="space-y-3"><label htmlFor="daily-answer" className="text-sm font-bold">Your answer</label><textarea id="daily-answer" dir="rtl" lang="ar" rows={2} value={typed} disabled={!!result} onChange={e => setTyped(e.target.value)} className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 font-arabic text-2xl" />
+          : <div className="space-y-3"><label htmlFor="daily-answer" className="text-sm font-bold">Your answer</label><textarea {...keyboard.inputProps} id="daily-answer" dir="rtl" lang="ar" rows={2} value={typed} disabled={!!result} onChange={e => setTyped(e.target.value)} className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 font-arabic text-2xl" />
             {step.kind === 'conversation' && !result && <button type="button" onClick={listening ? stopListening : startListening} className={button}>{listening ? <Square className="inline mr-2" size={16} /> : <Mic className="inline mr-2" size={16} />}{listening ? 'Stop listening' : 'Practice with microphone'}</button>}
             {speechStatus && <p role="status" className="text-sm text-slate-500">{speechStatus}</p>}
-            {!result && <VirtualKeyboard onInsertChar={char => setTyped(v => v + char)} onBackspace={() => setTyped(v => v.slice(0, -1))} onClear={() => setTyped('')} onEnter={() => checkAnswer()} />}
+            {!result && <VirtualKeyboard {...keyboard.keyboardProps} />}
           </div>}
         {result ? <div className="space-y-4" aria-live="polite"><div className={`p-4 rounded-2xl ${result.correct ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-amber-50 dark:bg-amber-950/40'}`}><p className="font-bold">{result.correct ? 'Well done!' : 'Keep practicing.'} {result.score}% match</p>
           {step.options ? <p className="mt-2">Correct answer: {step.options[step.correctIndex!]}</p> : <><p className="font-arabic text-2xl mt-2" dir="rtl" lang="ar">{step.arabic}</p><p className="text-sm mt-2">{step.english}</p></>}

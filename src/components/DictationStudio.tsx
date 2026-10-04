@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Headphones, Volume2, Sparkles, CheckCircle2, RotateCcw, Award } from 'lucide-react';
+import { useArabicKeyboard } from '../hooks/useArabicKeyboard';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { arabicAudio, calculateArabicMatchScore, normalizeArabicText } from '../utils/audio';
 import confetti from 'canvas-confetti';
@@ -18,6 +19,8 @@ export const DictationStudio: React.FC<DictationStudioProps> = ({ onAddXp }) => 
   const [showHint, setShowHint] = useState(false);
 
   const rewardedItems = useRef(new Set<string>());
+
+  const keyboard = useArabicKeyboard(typedInput, setTypedInput, () => handleEvaluate());
 
   const currentItem = DICTATION_BANK[currentIndex];
 
@@ -126,6 +129,7 @@ export const DictationStudio: React.FC<DictationStudioProps> = ({ onAddXp }) => 
             Type what you hear:
           </label>
           <textarea
+            {...keyboard.inputProps}
             rows={2}
             dir="rtl"
             value={typedInput}
@@ -194,12 +198,7 @@ export const DictationStudio: React.FC<DictationStudioProps> = ({ onAddXp }) => 
 
         {/* Virtual Keyboard */}
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-          <VirtualKeyboard
-            onInsertChar={(char) => setTypedInput((prev) => prev + char)}
-            onBackspace={() => setTypedInput((prev) => prev.slice(0, -1))}
-            onClear={() => setTypedInput('')}
-            onEnter={handleEvaluate}
-          />
+          <VirtualKeyboard {...keyboard.keyboardProps} />
         </div>
       </div>
     </div>

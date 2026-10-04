@@ -5,6 +5,7 @@ import { ReadingPassage, ReadingSentence, ReadingWord } from '../types';
 import { AudioPlayerButton } from './AudioPlayerButton';
 import { ScriptConnectorLab } from './ScriptConnectorLab';
 import { LetterCanvas } from './LetterCanvas';
+import { useArabicKeyboard } from '../hooks/useArabicKeyboard';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { QuranicReader } from './QuranicReader';
 import { DictationStudio } from './DictationStudio';
@@ -35,6 +36,13 @@ export const ReadingWritingModule: React.FC<ReadingWritingModuleProps> = ({
 
   // Typing practice state
   const [typedText, setTypedText] = useState('');
+  const keyboard = useArabicKeyboard(typedText, setTypedText, () => {
+    if (typedText.trim()) {
+      arabicAudio.playChime('celebrate');
+      confetti({ particleCount: 70 });
+      onAddXp(30);
+    }
+  });
   const targetExerciseSentence = 'أَنَا أَتَعَلَّمُ اللُّغَةَ العَرَبِيَّةَ بِفَصَاحَةٍ.';
 
   const handleWordClick = (word: ReadingWord) => {
@@ -438,6 +446,7 @@ export const ReadingWritingModule: React.FC<ReadingWritingModuleProps> = ({
 
               <div className="relative">
                 <textarea
+                  {...keyboard.inputProps}
                   rows={2}
                   dir="rtl"
                   value={typedText}
@@ -447,18 +456,7 @@ export const ReadingWritingModule: React.FC<ReadingWritingModuleProps> = ({
                 />
               </div>
 
-              <VirtualKeyboard
-                onInsertChar={(char) => setTypedText((prev) => prev + char)}
-                onBackspace={() => setTypedText((prev) => prev.slice(0, -1))}
-                onClear={() => setTypedText('')}
-                onEnter={() => {
-                  if (typedText.trim()) {
-                    arabicAudio.playChime('celebrate');
-                    confetti({ particleCount: 70 });
-                    onAddXp(30);
-                  }
-                }}
-              />
+              <VirtualKeyboard {...keyboard.keyboardProps} />
             </div>
           </div>
         </div>
