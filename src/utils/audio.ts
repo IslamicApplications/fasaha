@@ -196,35 +196,59 @@ class ArabicAudioService {
 
 export const arabicAudio = new ArabicAudioService();
 
-// Speech Recognition helper for Arabic
-export function createArabicSpeechRecognizer(
+// Speech Recognition helper for Arabic with robust permission and error handling
+export async function createArabicSpeechRecognizer(
   onResult: (transcript: string, isFinal: boolean) => void,
-  onError: (err: string) => void,
-  onEnd: () => void
+  onError: (friendlyMessage: string) => void,
+  onEnd: () => void,
+  lang: string = 'ar-SA'
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   if (!SpeechRec) {
-    onError('Speech recognition is not supported in this browser. Please try Chrome or Edge.');
+    onError('Speech recognition is not supported in this browser. Please use Google Chrome, Microsoft Edge, or Safari.');
     return null;
   }
 
+  // Pre-request microphone access so browser doesn't block SpeechRec
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Keep track of stream to release when done
+      setTimeout(() => {
+        stream.getTracks().forEach(t => t.stop());
+      }, 500);
+    }
+  } catch (e: any) {
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      onError('Microphone permission was denied. Please allow microphone access in your browser address bar.');
+      return null;
+    }
+  }
+
   const recognition = new SpeechRec();
-  recognition.lang = 'ar-SA';
-  recognition.continuous = false;
+  recognition.lang = lang;
+  recognition.continuous = true;
   recognition.interimResults = true;
+  recognition.maxAlternatives = 3;
+
+  let hasReceivedSpeech = false;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recognition.onresult = (event: any) => {
+    hasReceivedSpeech = true;
     let interim = '';
     let final = '';
+
     for (let i = event.resultIndex; i < event.results.length; ++i) {
+      const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        final += event.results[i][0].transcript;
+        final += transcript;
       } else {
-        interim += event.results[i][0].transcript;
+        interim += transcript;
       }
     }
+
     if (final) {
       onResult(final.trim(), true);
     } else if (interim) {
@@ -234,7 +258,25 @@ export function createArabicSpeechRecognizer(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recognition.onerror = (event: any) => {
-    onError(event.error || 'Microphone error');
+    const err = event.error;
+    if (err === 'no-speech') {
+      if (!hasReceivedSpeech) {
+        onError('No speech was detected yet. Please speak closer to your microphone.');
+      }
+      return;
+    }
+    if (err === 'not-allowed') {
+      onError('Microphone permission denied. Click the camera/microphone icon in your browser URL bar to allow.');
+      return;
+    }
+    if (err === 'network') {
+      onError('Network error connecting to speech recognition server. You can also record and playback your voice below.');
+      return;
+    }
+    if (err === 'aborted') {
+      return;
+    }
+    onError(`Speech recognition note: ${err}. Please try again.`);
   };
 
   recognition.onend = () => {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Mic, MicOff, Volume2, User, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageSquare, Mic, MicOff, Volume2, User, CheckCircle2, Play, Square, Radio, AlertCircle } from 'lucide-react';
 import { CONVERSATION_DIALOGUES } from '../data/conversationData';
 import { ConversationDialogue, DialogueLine } from '../types';
 import { AudioPlayerButton } from './AudioPlayerButton';
@@ -21,13 +21,20 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
   const [activeLineId, setActiveLineId] = useState<number | null>(null);
   
   // Speech Recognition state
-  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [selectedLocale, setSelectedLocale] = useState('ar-SA');
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [speechScore, setSpeechScore] = useState<number | null>(null);
   const [targetPracticeLine, setTargetPracticeLine] = useState<DialogueLine>(selectedDialogue.dialogue[0]);
-  const [speechError, setSpeechError] = useState<string | null>(null);
+  const [speechStatus, setSpeechStatus] = useState<string>('Ready to listen');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [recognizer, setRecognizer] = useState<any>(null);
+  const recognizerRef = useRef<any>(null);
+
+  // Audio Recorder state (Voice Playback & comparison)
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   // Roleplay mode state
   const [roleplayMode, setRoleplayMode] = useState<boolean>(false);
@@ -37,56 +44,103 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
     setTargetPracticeLine(selectedDialogue.dialogue[0]);
     setSpeechTranscript('');
     setSpeechScore(null);
+    setRecordedAudioUrl(null);
   }, [selectedDialogue]);
 
-  const handleStartSpeechPractice = (line: DialogueLine) => {
+  const handleStartSpeechPractice = async (line: DialogueLine) => {
     setTargetPracticeLine(line);
     setSpeechTranscript('');
     setSpeechScore(null);
-    setSpeechError(null);
+    setSpeechStatus('Requesting microphone & listening in Arabic...');
+    setIsListening(true);
 
-    const rec = createArabicSpeechRecognizer(
+    if (recognizerRef.current) {
+      try {
+        recognizerRef.current.stop();
+      } catch {
+        // ignore
+      }
+    }
+
+    const rec = await createArabicSpeechRecognizer(
       (transcript, isFinal) => {
         setSpeechTranscript(transcript);
-        if (isFinal) {
-          const score = calculateArabicMatchScore(line.arabic, transcript);
-          setSpeechScore(score);
-          setIsRecording(false);
+        setSpeechStatus(isFinal ? 'Speech recognized!' : 'Hearing voice...');
+        const score = calculateArabicMatchScore(line.arabic, transcript);
+        setSpeechScore(score);
 
-          if (score >= 70) {
-            arabicAudio.playChime('celebrate');
-            onAddXp(25);
-            confetti({ particleCount: 50, spread: 50 });
-          } else {
-            arabicAudio.playChime('correct');
-          }
+        if (score >= 65) {
+          arabicAudio.playChime('celebrate');
+          onAddXp(25);
+          confetti({ particleCount: 50, spread: 50 });
         }
       },
-      (err) => {
-        setSpeechError(err);
-        setIsRecording(false);
+      (friendlyMsg) => {
+        setSpeechStatus(friendlyMsg);
       },
       () => {
-        setIsRecording(false);
-      }
+        setIsListening(false);
+      },
+      selectedLocale
     );
 
     if (rec) {
-      setRecognizer(rec);
-      setIsRecording(true);
+      recognizerRef.current = rec;
       try {
         rec.start();
       } catch (e) {
-        console.warn('Speech rec already started:', e);
+        console.warn('Speech rec start error:', e);
       }
     }
   };
 
   const handleStopSpeechPractice = () => {
-    if (recognizer) {
-      recognizer.stop();
+    if (recognizerRef.current) {
+      try {
+        recognizerRef.current.stop();
+      } catch {
+        // ignore
+      }
     }
-    setIsRecording(false);
+    setIsListening(false);
+    setSpeechStatus('Listening stopped.');
+  };
+
+  // Direct Audio Recording via MediaRecorder for playback comparison
+  const handleStartVoiceRecording = async () => {
+    try {
+      audioChunksRef.current = [];
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        setRecordedAudioUrl(url);
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      recorder.start();
+      setIsRecordingAudio(true);
+      arabicAudio.playChime('click');
+    } catch {
+      setSpeechStatus('Could not access microphone for voice recording.');
+    }
+  };
+
+  const handleStopVoiceRecording = () => {
+    if (mediaRecorderRef.current && isRecordingAudio) {
+      mediaRecorderRef.current.stop();
+      setIsRecordingAudio(false);
+      arabicAudio.playChime('correct');
+    }
   };
 
   const handlePlayAllDialogue = async () => {
@@ -95,9 +149,7 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
       setActiveLineId(line.id);
       await new Promise<void>((resolve) => {
         arabicAudio.speak(line.arabic, {
-          onEnd: () => {
-            setTimeout(resolve, 600);
-          },
+          onEnd: () => setTimeout(resolve, 600),
         });
       });
     }
@@ -122,10 +174,10 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
             Conversational Studio & Speech Lab (المُحَادَثَةُ وَالنُّطْقُ)
           </h2>
           <p className="text-cyan-100/90 text-sm md:text-base leading-relaxed">
-            Engage in authentic real-life dialogues with native speaker audio, switch between roleplay avatars, and test your spoken Arabic pronunciation using microphone speech evaluation.
+            Practice speaking authentic situational Arabic with native audio, live microphone speech recognition, and instant voice recording & comparison.
           </p>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-2 flex-wrap">
             <button
               type="button"
               onClick={handlePlayAllDialogue}
@@ -162,7 +214,7 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                   arabicAudio.playChime('click');
                   setSelectedDialogue(d);
                 }}
-                className={`p-3 rounded-2xl text-left border transition shrink-0 min-w-[200px] ${
+                className={`p-3.5 rounded-2xl text-left border transition shrink-0 min-w-[200px] ${
                   selectedDialogue.id === d.id
                     ? 'bg-cyan-600 text-white border-cyan-500 shadow-md'
                     : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-cyan-300'
@@ -235,12 +287,10 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                     key={line.id}
                     className={`flex items-start gap-3 ${isSpeakerA ? 'flex-row' : 'flex-row-reverse'}`}
                   >
-                    {/* Avatar */}
                     <div className="w-10 h-10 rounded-2xl bg-cyan-100 dark:bg-cyan-950/80 flex items-center justify-center text-xl shrink-0 shadow-sm border border-cyan-200 dark:border-cyan-800">
                       {speakerMeta.avatar}
                     </div>
 
-                    {/* Bubble */}
                     <div
                       className={`max-w-[82%] p-4 rounded-3xl space-y-2 border transition ${
                         isCurrentActive
@@ -252,7 +302,6 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                           : 'bg-cyan-50/60 dark:bg-slate-800/90 border-cyan-100 dark:border-cyan-900/60'
                       }`}
                     >
-                      {/* Name & Tools */}
                       <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
                         <span>{speakerMeta.name}</span>
                         <div className="flex items-center gap-1">
@@ -268,7 +317,6 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                         </div>
                       </div>
 
-                      {/* Arabic Text */}
                       <p
                         className="font-arabic text-2xl font-bold text-slate-900 dark:text-white leading-relaxed text-right"
                         dir="rtl"
@@ -276,13 +324,11 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                         {line.arabic}
                       </p>
 
-                      {/* Transliteration & English */}
                       <div className="text-xs space-y-0.5 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
                         <p className="font-medium text-cyan-700 dark:text-cyan-300">{line.transliteration}</p>
                         <p className="text-slate-600 dark:text-slate-400 italic">"{line.english}"</p>
                       </div>
 
-                      {/* Grammar Tip */}
                       {line.grammarTip && (
                         <p className="text-[10px] text-slate-500 bg-white/70 dark:bg-slate-900/70 p-2 rounded-xl mt-1">
                           💡 {line.grammarTip}
@@ -296,19 +342,31 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Interactive Microphone Speech Evaluation (5 cols) */}
+        {/* Right Column: AI Pronunciation Studio & Direct Audio Recorder (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="sticky top-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-md space-y-6">
-            <div>
-              <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider block">
-                🎙️ AI Pronunciation Trainer
-              </span>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                Speak in Arabic
-              </h3>
-              <p className="text-xs text-slate-500">
-                Read the highlighted phrase aloud into your microphone to get instant recognition feedback.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider block">
+                  🎙️ AI Speech & Voice Lab
+                </span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+                  Pronunciation Practice
+                </h3>
+              </div>
+
+              {/* Dialect Locale Switcher */}
+              <select
+                value={selectedLocale}
+                onChange={(e) => setSelectedLocale(e.target.value)}
+                className="text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 text-slate-700 dark:text-slate-300 focus:outline-none"
+              >
+                <option value="ar-SA">🇸🇦 Standard / Saudi</option>
+                <option value="ar-EG">🇪🇬 Egyptian</option>
+                <option value="ar-AE">🇦🇪 Gulf / UAE</option>
+                <option value="ar-LB">🇱🇧 Levantine</option>
+                <option value="ar-MA">🇲🇦 Moroccan</option>
+              </select>
             </div>
 
             {/* Target Phrase Box */}
@@ -327,36 +385,79 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
               </div>
             </div>
 
-            {/* Microphone Button */}
-            <div className="text-center space-y-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (isRecording) {
-                    handleStopSpeechPractice();
-                  } else {
-                    handleStartSpeechPractice(targetPracticeLine);
-                  }
-                }}
-                className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center text-white transition-all transform active:scale-95 shadow-xl ${
-                  isRecording
-                    ? 'bg-rose-600 animate-pulse ring-4 ring-rose-400'
-                    : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 hover:scale-105'
-                }`}
-              >
-                {isRecording ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
-              </button>
+            {/* Dual Actions: 1. Live Speech Recognition Mic  2. Direct Audio Recorder */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-4">
+                {/* AI Speech Recognition Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isListening) {
+                      handleStopSpeechPractice();
+                    } else {
+                      handleStartSpeechPractice(targetPracticeLine);
+                    }
+                  }}
+                  className={`flex-1 py-4 px-3 rounded-2xl flex flex-col items-center justify-center text-white transition-all transform active:scale-95 shadow-lg ${
+                    isListening
+                      ? 'bg-rose-600 animate-pulse ring-4 ring-rose-400'
+                      : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500'
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-6 h-6 mb-1" /> : <Mic className="w-6 h-6 mb-1" />}
+                  <span className="text-xs font-bold">
+                    {isListening ? 'Stop AI Listening' : 'AI Speech Recognition'}
+                  </span>
+                </button>
 
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
-                {isRecording ? 'Listening in Arabic... Speak now!' : 'Click to Speak'}
-              </p>
+                {/* Direct Voice Record & Playback Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isRecordingAudio) {
+                      handleStopVoiceRecording();
+                    } else {
+                      handleStartVoiceRecording();
+                    }
+                  }}
+                  className={`flex-1 py-4 px-3 rounded-2xl flex flex-col items-center justify-center transition-all transform active:scale-95 shadow-md border ${
+                    isRecordingAudio
+                      ? 'bg-amber-600 text-white border-amber-500 animate-pulse'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {isRecordingAudio ? <Square className="w-6 h-6 mb-1 text-white" /> : <Radio className="w-6 h-6 mb-1 text-amber-500" />}
+                  <span className="text-xs font-bold">
+                    {isRecordingAudio ? 'Stop Recording' : 'Record My Voice'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Status Notice */}
+              <div className="flex items-center gap-2 text-xs text-slate-500 justify-center text-center">
+                <AlertCircle className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                <span>{speechStatus}</span>
+              </div>
             </div>
+
+            {/* Recorded Voice Playback Widget */}
+            {recordedAudioUrl && (
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-900 space-y-2 animate-fadeIn">
+                <span className="text-[10px] font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider block">
+                  🎧 Your Recorded Voice Playback:
+                </span>
+                <audio controls src={recordedAudioUrl} className="w-full h-9 rounded-lg" />
+                <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                  Compare your recorded pronunciation side-by-side with the "Model Audio" above!
+                </p>
+              </div>
+            )}
 
             {/* Live Transcript & Recognition Score */}
             {speechTranscript && (
-              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2 animate-fadeIn">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  You Spoke:
+                  You Spoke (AI Transcription):
                 </span>
                 <p className="font-arabic text-xl font-bold text-slate-900 dark:text-white text-right" dir="rtl">
                   {speechTranscript}
@@ -367,7 +468,7 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                     <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Pronunciation Match:</span>
                     <span
                       className={`text-sm font-extrabold px-3 py-1 rounded-full ${
-                        speechScore >= 70
+                        speechScore >= 65
                           ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                           : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                       }`}
@@ -376,12 +477,6 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                     </span>
                   </div>
                 )}
-              </div>
-            )}
-
-            {speechError && (
-              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-rose-900 dark:text-rose-200 text-xs">
-                ⚠️ {speechError}
               </div>
             )}
           </div>
