@@ -336,14 +336,14 @@ export const PracticeHub: React.FC<PracticeHubProps> = ({ stats, onAddXp }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { title: 'First Letter Master', desc: 'Mastered 5 alphabet letters', icon: '🔤', achieved: stats.completedLetters.length >= 5 },
-              { title: 'Vocab Enthusiast', desc: 'Learned 10 new vocabulary words', icon: '📚', achieved: stats.masteredVocab.length >= 5 },
-              { title: 'Calligrapher', desc: 'Completed handwriting tracing canvas', icon: '✍️', achieved: stats.xp >= 100 },
-              { title: 'Fluent Speaker', desc: 'Tested speech in conversation studio', icon: '🎙️', achieved: stats.completedDialogues.length >= 1 },
-              { title: 'Syntax Architect', desc: 'Completed 3 grammar modules', icon: '🏛️', achieved: stats.completedGrammar.length >= 3 },
+              { title: 'First Letter Master', desc: 'Mastered 5 alphabet letters', icon: '🔤', achieved: (stats.completedLetters || []).length >= 5 },
+              { title: 'Vocab Enthusiast', desc: 'Learned 10 new vocabulary words', icon: '📚', achieved: (stats.masteredVocab || []).length >= 5 },
+              { title: 'Calligrapher', desc: 'Completed handwriting tracing canvas', icon: '✍️', achieved: (stats.xp || 0) >= 100 },
+              { title: 'Fluent Speaker', desc: 'Tested speech in conversation studio', icon: '🎙️', achieved: (stats.completedDialogues || []).length >= 1 },
+              { title: 'Syntax Architect', desc: 'Completed 3 grammar modules', icon: '🏛️', achieved: (stats.completedGrammar || []).length >= 3 },
               { title: 'Heritage Seeker', desc: 'Explored cultural proverbs & styles', icon: '🕌', achieved: true },
-              { title: 'Streak Champion', desc: 'Maintained 3+ days active streak', icon: '🔥', achieved: stats.streak >= 1 },
-              { title: 'Fasaha Scholar', desc: 'Earned 500+ XP in total learning', icon: '👑', achieved: stats.xp >= 500 },
+              { title: 'Streak Champion', desc: 'Maintained 3+ days active streak', icon: '🔥', achieved: (stats.streak || 0) >= 1 },
+              { title: 'Fasaha Scholar', desc: 'Earned 500+ XP in total learning', icon: '👑', achieved: (stats.xp || 0) >= 500 },
             ].map((badge, idx) => (
               <div
                 key={idx}

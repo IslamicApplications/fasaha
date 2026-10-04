@@ -36,7 +36,18 @@ export function App() {
     const saved = localStorage.getItem('fasaha_stats');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          ...INITIAL_STATS,
+          ...parsed,
+          completedLetters: Array.isArray(parsed?.completedLetters) ? parsed.completedLetters : INITIAL_STATS.completedLetters,
+          masteredVocab: Array.isArray(parsed?.masteredVocab) ? parsed.masteredVocab : INITIAL_STATS.masteredVocab,
+          bookmarkedVocab: Array.isArray(parsed?.bookmarkedVocab) ? parsed.bookmarkedVocab : INITIAL_STATS.bookmarkedVocab,
+          completedReading: Array.isArray(parsed?.completedReading) ? parsed.completedReading : INITIAL_STATS.completedReading,
+          completedGrammar: Array.isArray(parsed?.completedGrammar) ? parsed.completedGrammar : INITIAL_STATS.completedGrammar,
+          completedDialogues: Array.isArray(parsed?.completedDialogues) ? parsed.completedDialogues : INITIAL_STATS.completedDialogues,
+          unlockedBadges: Array.isArray(parsed?.unlockedBadges) ? parsed.unlockedBadges : INITIAL_STATS.unlockedBadges,
+        };
       } catch {
         return INITIAL_STATS;
       }
@@ -46,12 +57,20 @@ export function App() {
 
   // Persist stats in localStorage
   useEffect(() => {
-    localStorage.setItem('fasaha_stats', JSON.stringify(stats));
+    try {
+      localStorage.setItem('fasaha_stats', JSON.stringify(stats));
+    } catch {
+      // ignore
+    }
   }, [stats]);
 
   // Handle Theme switching & root class manipulation
   useEffect(() => {
-    localStorage.setItem('fasaha_theme', theme);
+    try {
+      localStorage.setItem('fasaha_theme', theme);
+    } catch {
+      // ignore
+    }
     const root = document.documentElement;
     root.classList.remove('dark', 'parchment-mode');
 
@@ -73,72 +92,78 @@ export function App() {
   const handleAddXp = (amount: number) => {
     setStats((prev) => ({
       ...prev,
-      xp: prev.xp + amount,
+      xp: (prev.xp || 0) + amount,
     }));
   };
 
   const handleToggleCompleteLetter = (id: number) => {
     setStats((prev) => {
-      const exists = prev.completedLetters.includes(id);
+      const letters = prev.completedLetters || [];
+      const exists = letters.includes(id);
       return {
         ...prev,
         completedLetters: exists
-          ? prev.completedLetters.filter((l) => l !== id)
-          : [...prev.completedLetters, id],
+          ? letters.filter((l) => l !== id)
+          : [...letters, id],
       };
     });
   };
 
   const handleToggleMasterVocab = (id: string) => {
     setStats((prev) => {
-      const exists = prev.masteredVocab.includes(id);
+      const list = prev.masteredVocab || [];
+      const exists = list.includes(id);
       return {
         ...prev,
         masteredVocab: exists
-          ? prev.masteredVocab.filter((v) => v !== id)
-          : [...prev.masteredVocab, id],
+          ? list.filter((v) => v !== id)
+          : [...list, id],
       };
     });
   };
 
   const handleToggleBookmarkVocab = (id: string) => {
     setStats((prev) => {
-      const exists = prev.bookmarkedVocab.includes(id);
+      const list = prev.bookmarkedVocab || [];
+      const exists = list.includes(id);
       return {
         ...prev,
         bookmarkedVocab: exists
-          ? prev.bookmarkedVocab.filter((v) => v !== id)
-          : [...prev.bookmarkedVocab, id],
+          ? list.filter((v) => v !== id)
+          : [...list, id],
       };
     });
   };
 
   const handleToggleCompleteReading = (id: string) => {
     setStats((prev) => {
-      if (prev.completedReading.includes(id)) return prev;
+      const list = prev.completedReading || [];
+      if (list.includes(id)) return prev;
       return {
         ...prev,
-        completedReading: [...prev.completedReading, id],
+        completedReading: [...list, id],
       };
     });
   };
 
   const handleToggleCompleteGrammar = (id: string) => {
     setStats((prev) => {
-      if (prev.completedGrammar.includes(id)) return prev;
+      const list = prev.completedGrammar || [];
+      if (list.includes(id)) return prev;
       return {
         ...prev,
-        completedGrammar: [...prev.completedGrammar, id],
+        completedGrammar: [...list, id],
       };
     });
   };
 
   const handleToggleCompleteDialogue = (id: string) => {
     setStats((prev) => {
-      if (prev.completedDialogues.includes(id)) return prev;
+      const list = prev.completedDialogues || [];
+      if (list.includes(id)) return prev;
       return {
         ...prev,
-        completedDialogues: [...prev.completedDialogues, id],
+        completedDialogues: [...list, id],
       };
     });
   };
@@ -158,7 +183,7 @@ export function App() {
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar with 6 Pedagogical Steps */}
+          {/* Sidebar with 7 Pedagogical Steps */}
           <Sidebar
             currentModule={currentModule}
             onSelectModule={setCurrentModule}
@@ -170,7 +195,7 @@ export function App() {
             {currentModule === 'alphabet' && (
               <AlphabetModule
                 onAddXp={handleAddXp}
-                completedLetters={stats.completedLetters}
+                completedLetters={stats.completedLetters || []}
                 onToggleCompleteLetter={handleToggleCompleteLetter}
               />
             )}
@@ -178,8 +203,8 @@ export function App() {
             {currentModule === 'vocabulary' && (
               <VocabularyModule
                 onAddXp={handleAddXp}
-                masteredVocab={stats.masteredVocab}
-                bookmarkedVocab={stats.bookmarkedVocab}
+                masteredVocab={stats.masteredVocab || []}
+                bookmarkedVocab={stats.bookmarkedVocab || []}
                 onToggleMaster={handleToggleMasterVocab}
                 onToggleBookmark={handleToggleBookmarkVocab}
               />
@@ -188,7 +213,7 @@ export function App() {
             {currentModule === 'reading_writing' && (
               <ReadingWritingModule
                 onAddXp={handleAddXp}
-                completedReading={stats.completedReading}
+                completedReading={stats.completedReading || []}
                 onToggleCompleteReading={handleToggleCompleteReading}
               />
             )}
@@ -200,7 +225,7 @@ export function App() {
             {currentModule === 'grammar' && (
               <GrammarModule
                 onAddXp={handleAddXp}
-                completedGrammar={stats.completedGrammar}
+                completedGrammar={stats.completedGrammar || []}
                 onToggleCompleteGrammar={handleToggleCompleteGrammar}
               />
             )}
@@ -208,7 +233,7 @@ export function App() {
             {currentModule === 'conversation' && (
               <ConversationModule
                 onAddXp={handleAddXp}
-                completedDialogues={stats.completedDialogues}
+                completedDialogues={stats.completedDialogues || []}
                 onToggleCompleteDialogue={handleToggleCompleteDialogue}
               />
             )}
@@ -231,7 +256,7 @@ export function App() {
             فَصَاحَة • تَعَلَّمِ اللُّغَةَ العَرَبِيَّةَ بِإِتْقَانٍ
           </p>
           <p>
-            Fasaha Arabic Learning Suite • Structured on 6 Pedagogical Steps for Authentic Arabic Literacy.
+            Fasaha Arabic Learning Suite • Structured on Core Pedagogical Steps for Authentic Arabic Literacy.
           </p>
         </div>
       </footer>
