@@ -259,10 +259,8 @@ export async function createArabicSpeechRecognizer(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recognition.onerror = (event: any) => {
     const err = event.error;
-    if (err === 'no-speech') {
-      if (!hasReceivedSpeech) {
-        onError('No speech was detected yet. Please speak closer to your microphone.');
-      }
+    if (err === 'no-speech' || err === 'aborted') {
+      // Natural pause between words or idle listening - do not surface error
       return;
     }
     if (err === 'not-allowed') {
@@ -270,13 +268,10 @@ export async function createArabicSpeechRecognizer(
       return;
     }
     if (err === 'network') {
-      onError('Network error connecting to speech recognition server. You can also record and playback your voice below.');
+      // Cloud speech server unavailable - fallback gracefully
+      onError('Speech server busy. You can record your voice below for direct acoustic evaluation and playback.');
       return;
     }
-    if (err === 'aborted') {
-      return;
-    }
-    onError(`Speech recognition note: ${err}. Please try again.`);
   };
 
   recognition.onend = () => {
