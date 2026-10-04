@@ -18,12 +18,48 @@ class ArabicAudioService {
   private initVoices() {
     if (!this.synth) return;
     const voices = this.synth.getVoices();
-    // Prioritize high-quality Arabic voices
-    this.arabicVoice = 
-      voices.find(v => v.lang.startsWith('ar-SA') || v.lang === 'ar_SA') ||
-      voices.find(v => v.lang.startsWith('ar-EG') || v.lang === 'ar_EG') ||
-      voices.find(v => v.lang.startsWith('ar') || v.lang.includes('Arabic')) ||
-      null;
+    if (!voices || voices.length === 0) return;
+
+    // Filter Arabic voices
+    const arabicVoices = voices.filter(
+      (v) =>
+        v.lang.toLowerCase().startsWith('ar') ||
+        v.lang.toLowerCase().includes('arabic') ||
+        v.name.toLowerCase().includes('arabic')
+    );
+
+    if (arabicVoices.length === 0) {
+      this.isVoiceInitialized = true;
+      return;
+    }
+
+    // Rank voices to find the highest-fidelity natural/neural voice
+    const rankedVoices = [...arabicVoices].sort((a, b) => {
+      const getScore = (voice: SpeechSynthesisVoice): number => {
+        const name = (voice.name || '').toLowerCase();
+        const lang = (voice.lang || '').toLowerCase();
+        let score = 0;
+
+        // Neural / Natural / Premium / Enhanced voices (Highest fidelity)
+        if (name.includes('natural') || name.includes('neural')) score += 200;
+        if (name.includes('premium') || name.includes('enhanced')) score += 150;
+        if (name.includes('online') || name.includes('cloud')) score += 100;
+        if (name.includes('siri') || name.includes('google') || name.includes('microsoft')) score += 80;
+
+        // Standard Dialect preference
+        if (lang.startsWith('ar-sa') || lang === 'ar_sa') score += 50;
+        if (lang.startsWith('ar-eg') || lang === 'ar-ae' || lang === 'ar-jo') score += 40;
+
+        // Favor non-local / high-definition web voices
+        if (!voice.localService) score += 30;
+
+        return score;
+      };
+
+      return getScore(b) - getScore(a);
+    });
+
+    this.arabicVoice = rankedVoices[0];
     this.isVoiceInitialized = true;
   }
 

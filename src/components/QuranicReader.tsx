@@ -21,20 +21,52 @@ export const QuranicReader: React.FC<QuranicReaderProps> = ({ onAddXp }) => {
 
   const handlePlayAyah = (verse: QuranicVerse) => {
     setActiveAyah(verse.ayahNumber);
-    arabicAudio.speak(verse.arabic, {
-      onEnd: () => setActiveAyah(null),
-    });
+    if (verse.audioUrl) {
+      const audio = new Audio(verse.audioUrl);
+      audio.onended = () => setActiveAyah(null);
+      audio.onerror = () => {
+        arabicAudio.speak(verse.arabic, {
+          onEnd: () => setActiveAyah(null),
+        });
+      };
+      audio.play().catch(() => {
+        arabicAudio.speak(verse.arabic, {
+          onEnd: () => setActiveAyah(null),
+        });
+      });
+    } else {
+      arabicAudio.speak(verse.arabic, {
+        onEnd: () => setActiveAyah(null),
+      });
+    }
   };
 
   const handlePlayEntireSurah = async () => {
     for (let i = 0; i < selectedText.verses.length; i++) {
       const v = selectedText.verses[i];
       setActiveAyah(v.ayahNumber);
-      await new Promise<void>((resolve) => {
-        arabicAudio.speak(v.arabic, {
-          onEnd: () => setTimeout(resolve, 500),
+      if (v.audioUrl) {
+        await new Promise<void>((resolve) => {
+          const audio = new Audio(v.audioUrl);
+          audio.onended = () => setTimeout(resolve, 400);
+          audio.onerror = () => {
+            arabicAudio.speak(v.arabic, {
+              onEnd: () => setTimeout(resolve, 400),
+            });
+          };
+          audio.play().catch(() => {
+            arabicAudio.speak(v.arabic, {
+              onEnd: () => setTimeout(resolve, 400),
+            });
+          });
         });
-      });
+      } else {
+        await new Promise<void>((resolve) => {
+          arabicAudio.speak(v.arabic, {
+            onEnd: () => setTimeout(resolve, 400),
+          });
+        });
+      }
     }
     setActiveAyah(null);
     onAddXp(30);
