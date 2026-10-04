@@ -30,8 +30,25 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
   const [speechScore, setSpeechScore] = useState<number | null>(null);
   const [targetPracticeLine, setTargetPracticeLine] = useState<DialogueLine>(selectedDialogue.dialogue[0]);
   const [speechStatus, setSpeechStatus] = useState<string>('Ready to practice');
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>('');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognizerRef = useRef<any>(null);
+
+  // Load and monitor browser voices
+  useEffect(() => {
+    const updateVoices = () => {
+      const v = arabicAudio.getAvailableArabicVoices();
+      setAvailableVoices(v);
+      const curr = arabicAudio.getCurrentVoice();
+      if (curr) setSelectedVoiceName(curr.name);
+    };
+
+    updateVoices();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
+  }, []);
 
   // Audio Recorder & Acoustic Evaluator state
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
@@ -51,6 +68,12 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
     setRecordedAudioUrl(null);
     setSpeechStatus('Ready to practice');
   }, [selectedDialogue]);
+
+  const handleSelectVoice = (voiceName: string) => {
+    setSelectedVoiceName(voiceName);
+    arabicAudio.setVoiceByName(voiceName);
+    arabicAudio.speak('مَرْحَبًا بِكُمْ فِي فَصَاحَة', { rate: 0.95 });
+  };
 
   const handleStartSpeechPractice = async (line: DialogueLine) => {
     setTargetPracticeLine(line);
@@ -431,28 +454,49 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
         {/* Right Column: AI Pronunciation Studio & Direct Voice Recorder (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="sticky top-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-md space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider block">
-                  🎙️ AI Speech & Voice Lab
-                </span>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
-                  Pronunciation Practice
-                </h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider block">
+                    🎙️ AI Speech & Voice Lab
+                  </span>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+                    Pronunciation Practice
+                  </h3>
+                </div>
+
+                {/* Dialect Locale Switcher */}
+                <select
+                  value={selectedLocale}
+                  onChange={(e) => setSelectedLocale(e.target.value)}
+                  className="text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 text-slate-700 dark:text-slate-300 focus:outline-none"
+                  title="Speech Recognition Dialect"
+                >
+                  <option value="ar-SA">🇸🇦 Standard / Saudi</option>
+                  <option value="ar-EG">🇪🇬 Egyptian</option>
+                  <option value="ar-AE">🇦🇪 Gulf / UAE</option>
+                  <option value="ar-LB">🇱🇧 Levantine</option>
+                  <option value="ar-MA">🇲🇦 Moroccan</option>
+                </select>
               </div>
 
-              {/* Dialect Locale Switcher */}
-              <select
-                value={selectedLocale}
-                onChange={(e) => setSelectedLocale(e.target.value)}
-                className="text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 text-slate-700 dark:text-slate-300 focus:outline-none"
-              >
-                <option value="ar-SA">🇸🇦 Standard / Saudi</option>
-                <option value="ar-EG">🇪🇬 Egyptian</option>
-                <option value="ar-AE">🇦🇪 Gulf / UAE</option>
-                <option value="ar-LB">🇱🇧 Levantine</option>
-                <option value="ar-MA">🇲🇦 Moroccan</option>
-              </select>
+              {/* Voice Engine Picker */}
+              {availableVoices.length > 0 && (
+                <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs">
+                  <span className="font-semibold text-slate-500 shrink-0">🔊 Voice:</span>
+                  <select
+                    value={selectedVoiceName}
+                    onChange={(e) => handleSelectVoice(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none truncate"
+                  >
+                    {availableVoices.map((v) => (
+                      <option key={v.name} value={v.name}>
+                        {v.name} {v.name.toLowerCase().includes('enhanced') || v.name.toLowerCase().includes('premium') ? '✨ (HD)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Target Phrase Box */}

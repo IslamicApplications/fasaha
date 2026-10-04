@@ -63,6 +63,33 @@ class ArabicAudioService {
     this.isVoiceInitialized = true;
   }
 
+  public getAvailableArabicVoices(): SpeechSynthesisVoice[] {
+    if (!this.synth) return [];
+    const voices = this.synth.getVoices();
+    return voices.filter(
+      (v) =>
+        v.lang.toLowerCase().startsWith('ar') ||
+        v.lang.toLowerCase().includes('arabic') ||
+        v.name.toLowerCase().includes('arabic')
+    );
+  }
+
+  public getCurrentVoice(): SpeechSynthesisVoice | null {
+    if (!this.isVoiceInitialized) this.initVoices();
+    return this.arabicVoice;
+  }
+
+  public setVoiceByName(voiceName: string): boolean {
+    if (!this.synth) return false;
+    const voices = this.synth.getVoices();
+    const found = voices.find((v) => v.name === voiceName);
+    if (found) {
+      this.arabicVoice = found;
+      return true;
+    }
+    return false;
+  }
+
   public speak(text: string, options: { rate?: number; pitch?: number; onEnd?: () => void } = {}): void {
     if (!this.synth) {
       this.playHarmonicFallback();
