@@ -14,9 +14,10 @@ interface ConversationModuleProps {
 
 export const ConversationModule: React.FC<ConversationModuleProps> = ({
   onAddXp,
-  completedDialogues,
+  completedDialogues = [],
   onToggleCompleteDialogue,
 }) => {
+  const safeCompleted = completedDialogues || [];
   const [selectedDialogue, setSelectedDialogue] = useState<ConversationDialogue>(CONVERSATION_DIALOGUES[0]);
   const [activeLineId, setActiveLineId] = useState<number | null>(null);
   const [levelFilter, setLevelFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
@@ -260,7 +261,7 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
               />
             </div>
             <span className="text-[11px] font-bold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/80 px-2.5 py-1.5 rounded-xl border border-cyan-200 dark:border-cyan-800 shrink-0">
-              ✓ {completedDialogues.length}/{CONVERSATION_DIALOGUES.length} Done
+              ✓ {safeCompleted.length}/{CONVERSATION_DIALOGUES.length} Done
             </span>
           </div>
         </div>
@@ -304,7 +305,7 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
                 >
                   {d.level}
                 </span>
-                {completedDialogues.includes(d.id) && (
+                {safeCompleted.includes(d.id) && (
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 )}
               </div>
