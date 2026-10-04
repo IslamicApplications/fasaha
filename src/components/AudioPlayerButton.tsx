@@ -10,6 +10,7 @@ interface AudioPlayerButtonProps {
   variant?: 'primary' | 'secondary' | 'ghost' | 'icon-only';
   className?: string;
   label?: string;
+  title?: string;
 }
 
 export const AudioPlayerButton: React.FC<AudioPlayerButtonProps> = ({
@@ -20,6 +21,7 @@ export const AudioPlayerButton: React.FC<AudioPlayerButtonProps> = ({
   variant = 'secondary',
   className = '',
   label,
+  title = `Listen: "${text}"`,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -36,6 +38,7 @@ export const AudioPlayerButton: React.FC<AudioPlayerButtonProps> = ({
       rate,
       pitch,
       onEnd: () => setIsPlaying(false),
+      onCancel: () => setIsPlaying(false),
     });
   };
 
@@ -56,7 +59,7 @@ export const AudioPlayerButton: React.FC<AudioPlayerButtonProps> = ({
     <button
       type="button"
       onClick={handleSpeak}
-      title={`Listen: "${text}"`}
+      title={title}
       className={`inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-all duration-150 active:scale-95 ${sizeClasses} ${variantClasses} ${className}`}
     >
       {isPlaying ? (

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test scripts/regression.test.mjs"
+    "test": "node --test scripts/*.test.mjs",
+    "audio:preview": "node scripts/generate-audio.mjs --dry-run",
+    "audio:generate": "node scripts/generate-audio.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

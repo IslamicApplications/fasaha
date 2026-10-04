@@ -1,9 +1,34 @@
-// Arabic speech synthesis and audio utilities
+import { normalizeAudioText } from './audioText';
 
-class ArabicAudioService {
+interface SpeechOptions {
+  rate?: number;
+  pitch?: number;
+  onEnd?: () => void;
+  onCancel?: () => void;
+}
+
+// Local lesson recordings with browser speech as a fallback.
+
+export class ArabicAudioService {
   private synth: SpeechSynthesis | null = null;
   private arabicVoice: SpeechSynthesisVoice | null = null;
   private isVoiceInitialized = false;
+
+  private recordings: Record<string, string> = {};
+  private audioBase = './';
+  private recording: HTMLAudioElement | null = null;
+  private playbackId = 0;
+  private cancelPlayback: (() => void) | undefined;
+  private fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+  public setRecordings(recordings: Record<string, string>, baseUrl = './'): void {
+    this.recordings = recordings;
+    this.audioBase = baseUrl;
+  }
+
+  public hasRecording(text: string): boolean {
+    return Object.prototype.hasOwnProperty.call(this.recordings, normalizeAudioText(text));
+  }
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -90,46 +115,76 @@ class ArabicAudioService {
     return false;
   }
 
-  public speak(text: string, options: { rate?: number; pitch?: number; onEnd?: () => void } = {}): void {
-    if (!this.synth) {
-      this.playHarmonicFallback();
-      if (options.onEnd) setTimeout(options.onEnd, 600);
-      return;
-    }
-
-    // Cancel any ongoing speech
-    this.synth.cancel();
-
-    if (!this.isVoiceInitialized) {
-      this.initVoices();
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = this.arabicVoice ? this.arabicVoice.lang : 'ar-SA';
-    if (this.arabicVoice) {
-      utterance.voice = this.arabicVoice;
-    }
-    utterance.rate = options.rate ?? 0.85; // Slightly slower for language learners
-    utterance.pitch = options.pitch ?? 1.0;
-
-    if (options.onEnd) {
-      utterance.onend = options.onEnd;
-      utterance.onerror = options.onEnd;
-    }
-
+  public speak(text: string, options: SpeechOptions = {}): void {
+    this.stop();
+    const id = this.playbackId;
+    this.cancelPlayback = options.onCancel;
+    let finished = false;
+    const finish = () => {
+      if (id !== this.playbackId || finished) return;
+      finished = true;
+      this.recording = null;
+      this.cancelPlayback = undefined;
+      options.onEnd?.();
+    };
+    const browserFallback = () => {
+      if (id !== this.playbackId || finished) return;
+      this.recording = null;
+      if (!this.synth) {
+        this.playHarmonicFallback();
+        this.fallbackTimer = setTimeout(finish, 600);
+        return;
+      }
+      if (!this.isVoiceInitialized) this.initVoices();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = this.arabicVoice?.lang || 'ar-SA';
+      if (this.arabicVoice) utterance.voice = this.arabicVoice;
+      utterance.rate = options.rate ?? 0.85;
+      utterance.pitch = options.pitch ?? 1;
+      utterance.onend = finish;
+      utterance.onerror = finish;
+      try { this.synth.speak(utterance); }
+      catch { this.playHarmonicFallback(); finish(); }
+    };
+    const file = this.hasRecording(text) ? this.recordings[normalizeAudioText(text)] : undefined;
+    if (!file || typeof Audio === 'undefined') { browserFallback(); return; }
+    let failed = false;
+    const fallback = () => {
+      if (failed || id !== this.playbackId || finished) return;
+      failed = true;
+      if (this.recording) {
+        this.recording.onended = null;
+        this.recording.onerror = null;
+        this.recording.pause();
+      }
+      browserFallback();
+    };
     try {
-      this.synth.speak(utterance);
-    } catch (e) {
-      console.warn('Speech synthesis error, falling back:', e);
-      this.playHarmonicFallback();
-      if (options.onEnd) options.onEnd();
-    }
+      const url = new URL(file, new URL(this.audioBase, window.location.href));
+      const audio = new Audio(url.href);
+      this.recording = audio;
+      // Recordings are generated at normal speed; browser playback preserves pitch.
+      audio.playbackRate = Math.min(2, Math.max(0.5, options.rate ?? 0.85));
+      audio.preservesPitch = true;
+      audio.onended = finish;
+      audio.onerror = fallback;
+      audio.play().catch(fallback);
+    } catch { fallback(); }
   }
 
   public stop(): void {
-    if (this.synth) {
-      this.synth.cancel();
+    this.playbackId++;
+    if (this.fallbackTimer) clearTimeout(this.fallbackTimer);
+    if (this.recording) {
+      this.recording.onended = null;
+      this.recording.onerror = null;
+      this.recording.pause();
+      this.recording = null;
     }
+    this.synth?.cancel();
+    const cancel = this.cancelPlayback;
+    this.cancelPlayback = undefined;
+    cancel?.();
   }
 
   private chimeCtx: AudioContext | null = null;

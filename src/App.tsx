@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { DailyLesson } from './components/DailyLesson';
+import { claimDailyReward } from './utils/dailyLesson';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { AlphabetModule } from './components/AlphabetModule';
@@ -27,7 +29,7 @@ const INITIAL_STATS: UserStats = {
 };
 
 export function App() {
-  const [currentModule, setCurrentModule] = useState<ModuleType>('alphabet');
+  const [currentModule, setCurrentModule] = useState<ModuleType>('daily');
   const [theme, setTheme] = useState<'light' | 'dark' | 'parchment'>(() => {
     const saved = localStorage.getItem('fasaha_theme');
     return (saved as any) || 'light';
@@ -102,6 +104,10 @@ export function App() {
       return 'light';
     });
   };
+
+  const handleCompleteDaily = useCallback((date: string, xp: number) => {
+    setStats(prev => claimDailyReward(prev, date, xp));
+  }, []);
 
   const handleAddXp = (amount: number) => {
     setStats((prev) => ({
@@ -206,6 +212,8 @@ export function App() {
 
           {/* Module Main View Area */}
           <main className="flex-1 min-w-0">
+            {currentModule === 'daily' && <DailyLesson stats={stats} onComplete={handleCompleteDaily} />}
+
             {currentModule === 'alphabet' && (
               <AlphabetModule
                 onAddXp={handleAddXp}

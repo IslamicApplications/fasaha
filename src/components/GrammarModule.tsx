@@ -5,6 +5,7 @@ import { GrammarLesson } from '../types';
 import { AudioPlayerButton } from './AudioPlayerButton';
 import { arabicAudio } from '../utils/audio';
 import confetti from 'canvas-confetti';
+import { updateGrammarMistake } from '../utils/dailyLesson';
 
 interface GrammarModuleProps {
   onAddXp: (amount: number) => void;
@@ -37,9 +38,11 @@ export const GrammarModule: React.FC<GrammarModuleProps> = ({
   };
 
   const handleCheckQuiz = () => {
+    if (showResults) return;
     setShowResults(true);
     let correct = 0;
     selectedLesson.quiz.forEach((q) => {
+      updateGrammarMistake(`${selectedLesson.id}:${q.id}`, quizAnswers[q.id] === q.correctIndex);
       if (quizAnswers[q.id] === q.correctIndex) {
         correct++;
       }

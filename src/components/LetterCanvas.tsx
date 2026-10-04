@@ -229,12 +229,12 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-md">
+    <div className="w-full min-w-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-md">
       {/* Top Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
-        <div>
+      <div className="grid min-w-0 gap-3 pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="min-w-0">
           <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
-            <PenTool className="w-4 h-4 text-emerald-600" />
+            <PenTool className="w-4 h-4 shrink-0 text-emerald-600" />
             Interactive Calligraphy & Stroke Studio
           </h4>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -243,7 +243,7 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
         </div>
 
         {/* Nib Style / Color Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-3">
           <button
             type="button"
             onClick={() => setShowStrokeOrder(!showStrokeOrder)}
@@ -265,7 +265,7 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
           </button>
 
           {/* Pen types */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
+          <div className="flex max-w-full flex-wrap items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
             <button
               type="button"
               onClick={() => setPenStyle('qalam')}
@@ -296,7 +296,7 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
           </div>
 
           {/* Pen Color selector */}
-          <div className="flex items-center gap-1">
+          <div role="group" aria-label="Pen colour" className="flex shrink-0 items-center gap-2 p-1">
             {[
               { color: '#047857', label: 'Emerald' },
               { color: '#1e293b', label: 'Ink Black' },
@@ -308,7 +308,9 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
                 onClick={() => setPenColor(c.color)}
                 style={{ backgroundColor: c.color }}
                 title={c.label}
-                className={`w-5 h-5 rounded-full transition transform ${
+                aria-label={c.label}
+                aria-pressed={penColor === c.color}
+                className={`w-6 h-6 shrink-0 rounded-full transition transform ${
                   penColor === c.color ? 'ring-2 ring-offset-2 ring-emerald-500 scale-110' : 'opacity-80 hover:opacity-100'
                 }`}
               />
@@ -346,7 +348,7 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
       </div>
 
       {/* Bottom Action bar */}
-      <div className="flex items-center justify-between mt-3 pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-2">
         <button
           type="button"
           onClick={handleClear}
@@ -356,7 +358,7 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
           Clear Pad
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 max-w-full items-center gap-2">
           <button
             type="button"
             disabled={!hasDrawn}
@@ -367,7 +369,7 @@ export const LetterCanvas: React.FC<LetterCanvasProps> = ({
                 : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed'
             }`}
           >
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
             Evaluate Stroke & Save (+20 XP)
           </button>
         </div>

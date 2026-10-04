@@ -242,7 +242,7 @@ export const AlphabetModule: React.FC<AlphabetModuleProps> = ({
           </div>
 
           {/* Right Column: Selected Letter Detail & Tracing Studio (5 cols) */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="min-w-0 lg:col-span-5 space-y-4">
             {/* Letter Master Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-md space-y-6">
               {/* Header with pronunciation audio */}

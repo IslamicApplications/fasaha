@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Layers, PenTool, Cpu, MessageSquare, Globe2, Trophy } from 'lucide-react';
+import { CalendarDays, BookOpen, Layers, PenTool, Cpu, MessageSquare, Globe2, Trophy } from 'lucide-react';
 import { ModuleType, UserStats } from '../types';
 
 interface SidebarProps {
@@ -81,6 +81,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="w-full lg:w-72 shrink-0 space-y-4">
+      <button type="button" onClick={() => onSelectModule('daily')}
+        className={`w-full p-5 rounded-3xl text-left border transition ${currentModule === 'daily'
+          ? 'bg-emerald-700 text-white border-emerald-600 shadow-md'
+          : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 border-emerald-200 dark:border-emerald-900'}`}>
+        <div className="flex items-center gap-2 font-bold"><CalendarDays size={18} /> Today’s Lesson</div>
+        <p className="text-xs mt-2 opacity-80">Your focused 10-minute daily session</p>
+      </button>
       {/* Roadmap Navigation Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm space-y-2">
         <div className="px-2 py-1 mb-2">

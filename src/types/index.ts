@@ -1,4 +1,5 @@
 export type ModuleType = 
+  | 'daily'
   | 'alphabet' 
   | 'vocabulary' 
   | 'reading_writing' 
@@ -219,4 +220,5 @@ export interface UserStats {
   completedDialogues: string[];
   highScores: Record<string, number>;
   unlockedBadges: string[];
+  completedDailyLessons?: Record<string, number>;
 }

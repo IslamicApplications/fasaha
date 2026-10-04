@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
+import { AUDIO_MANIFEST } from './data/audioManifest';
+import { arabicAudio } from './utils/audio';
+
+arabicAudio.setRecordings(AUDIO_MANIFEST, import.meta.env.BASE_URL);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

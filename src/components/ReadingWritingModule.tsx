@@ -407,7 +407,7 @@ export const ReadingWritingModule: React.FC<ReadingWritingModuleProps> = ({
       {activeTab === 'writing_studio' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
                 <PenTool className="w-5 h-5 text-teal-600" />
                 Ruled Calligraphy Copybook
