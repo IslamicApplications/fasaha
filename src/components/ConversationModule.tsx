@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Mic, MicOff, Volume2, User, CheckCircle2, Play, Square, Radio, Star, Sparkles } from 'lucide-react';
+import { MessageSquare, Mic, MicOff, Volume2, User, CheckCircle2, Play, Square, Radio, Star, Sparkles, Search, Filter } from 'lucide-react';
 import { CONVERSATION_DIALOGUES } from '../data/conversationData';
 import { ConversationDialogue, DialogueLine } from '../types';
 import { AudioPlayerButton } from './AudioPlayerButton';
@@ -19,6 +19,8 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
 }) => {
   const [selectedDialogue, setSelectedDialogue] = useState<ConversationDialogue>(CONVERSATION_DIALOGUES[0]);
   const [activeLineId, setActiveLineId] = useState<number | null>(null);
+  const [levelFilter, setLevelFilter] = useState<'all' | 'beginner' | 'intermediate' | 'advanced'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Speech Recognition state
   const [isListening, setIsListening] = useState(false);
@@ -216,49 +218,116 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Dialogue Scenario Selector & Chat Feed (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Scenario Selector */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {CONVERSATION_DIALOGUES.map((d) => (
+      {/* Filter and Scenario Controls */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Level Filter Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            {(
+              [
+                { id: 'all', label: 'All Scenarios', ar: 'الكل' },
+                { id: 'beginner', label: 'Beginner', ar: 'مبتدئ' },
+                { id: 'intermediate', label: 'Intermediate', ar: 'متوسط' },
+                { id: 'advanced', label: 'Advanced', ar: 'متقدم' },
+              ] as const
+            ).map((lvl) => (
               <button
-                key={d.id}
+                key={lvl.id}
                 type="button"
-                onClick={() => {
-                  arabicAudio.playChime('click');
-                  setSelectedDialogue(d);
-                }}
-                className={`p-3.5 rounded-2xl text-left border transition shrink-0 min-w-[200px] ${
-                  selectedDialogue.id === d.id
-                    ? 'bg-cyan-600 text-white border-cyan-500 shadow-md'
-                    : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-cyan-300'
+                onClick={() => setLevelFilter(lvl.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1 ${
+                  levelFilter === lvl.id
+                    ? 'bg-cyan-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      selectedDialogue.id === d.id
-                        ? 'bg-cyan-700 text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {d.level}
-                  </span>
-                  {completedDialogues.includes(d.id) && (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-                  )}
-                </div>
-                <h4 className="font-bold text-sm leading-tight">{d.titleEn}</h4>
-                <p className="font-arabic text-sm opacity-90 mt-0.5" dir="rtl">
-                  {d.titleAr}
-                </p>
+                <span>{lvl.label}</span>
+                <span className="opacity-70 text-[10px]">({lvl.ar})</span>
               </button>
             ))}
           </div>
 
-          {/* Dialogue Message Feed */}
+          {/* Search Bar & Progress */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 sm:w-56">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search scenarios..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              />
+            </div>
+            <span className="text-[11px] font-bold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/80 px-2.5 py-1.5 rounded-xl border border-cyan-200 dark:border-cyan-800 shrink-0">
+              ✓ {completedDialogues.length}/{CONVERSATION_DIALOGUES.length} Done
+            </span>
+          </div>
+        </div>
+
+        {/* Scenario Carousel */}
+        <div className="flex items-center gap-2.5 overflow-x-auto pb-2 pt-1 scrollbar-thin">
+          {CONVERSATION_DIALOGUES.filter((d) => {
+            const matchesLevel = levelFilter === 'all' || d.level === levelFilter;
+            const matchesSearch =
+              !searchQuery ||
+              d.titleEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              d.titleAr.includes(searchQuery) ||
+              (d.category && d.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
+              d.scenario.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesLevel && matchesSearch;
+          }).map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => {
+                arabicAudio.playChime('click');
+                setSelectedDialogue(d);
+              }}
+              className={`p-3.5 rounded-2xl text-left border transition shrink-0 w-[230px] ${
+                selectedDialogue.id === d.id
+                  ? 'bg-cyan-600 text-white border-cyan-500 shadow-md ring-2 ring-cyan-400/50'
+                  : 'bg-slate-50 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-cyan-300'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span
+                  className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    selectedDialogue.id === d.id
+                      ? 'bg-cyan-700 text-white'
+                      : d.level === 'beginner'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                      : d.level === 'intermediate'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                      : 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
+                  }`}
+                >
+                  {d.level}
+                </span>
+                {completedDialogues.includes(d.id) && (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                )}
+              </div>
+              <h4 className="font-bold text-xs leading-tight line-clamp-1">{d.titleEn}</h4>
+              <p className="font-arabic text-sm font-semibold opacity-95 mt-1 text-right line-clamp-1" dir="rtl">
+                {d.titleAr}
+              </p>
+              {d.category && (
+                <span className={`text-[10px] block mt-1.5 opacity-75 font-medium ${
+                  selectedDialogue.id === d.id ? 'text-cyan-100' : 'text-slate-500 dark:text-slate-400'
+                }`}>
+                  📂 {d.category}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Dialogue Chat Feed (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-md space-y-6">
             {/* Scenario Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 text-xs">

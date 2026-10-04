@@ -166,7 +166,8 @@ export interface ConversationDialogue {
   titleEn: string;
   titleAr: string;
   scenario: string;
-  level: 'beginner' | 'intermediate';
+  level: 'beginner' | 'intermediate' | 'advanced';
+  category?: string;
   icon: string;
   speakerA: { name: string; avatar: string; role: string };
   speakerB: { name: string; avatar: string; role: string };
