@@ -16,9 +16,10 @@ interface AlphabetModuleProps {
 
 export const AlphabetModule: React.FC<AlphabetModuleProps> = ({
   onAddXp,
-  completedLetters,
+  completedLetters = [],
   onToggleCompleteLetter,
 }) => {
+  const safeCompleted = completedLetters || [];
   const [selectedLetter, setSelectedLetter] = useState<ArabicLetter>(ALPHABET_DATA[0]);
   const [activeTab, setActiveTab] = useState<'letters' | 'harakat' | 'quiz'>('letters');
   const [filterType, setFilterType] = useState<'all' | 'sun' | 'moon' | 'emphatic' | 'nonconnector'>('all');
@@ -206,7 +207,7 @@ export const AlphabetModule: React.FC<AlphabetModuleProps> = ({
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-2.5" dir="rtl">
               {filteredLetters.map((l) => {
                 const isSelected = selectedLetter.id === l.id;
-                const isCompleted = completedLetters.includes(l.id);
+                const isCompleted = safeCompleted.includes(l.id);
 
                 return (
                   <button

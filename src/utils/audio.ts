@@ -132,12 +132,27 @@ class ArabicAudioService {
     }
   }
 
+  private chimeCtx: AudioContext | null = null;
+
+  private getChimeContext(): AudioContext | null {
+    if (typeof window === 'undefined') return null;
+    if (!this.chimeCtx) {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioCtx) {
+        this.chimeCtx = new AudioCtx();
+      }
+    }
+    if (this.chimeCtx && this.chimeCtx.state === 'suspended') {
+      this.chimeCtx.resume().catch(() => {});
+    }
+    return this.chimeCtx;
+  }
+
   // Soft melodic chime for feedback or fallback
   public playChime(type: 'success' | 'click' | 'correct' | 'wrong' | 'celebrate'): void {
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      const ctx = this.getChimeContext();
+      if (!ctx) return;
 
       if (type === 'click') {
         const osc = ctx.createOscillator();

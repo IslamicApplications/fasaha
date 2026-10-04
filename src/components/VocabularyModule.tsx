@@ -17,11 +17,13 @@ interface VocabularyModuleProps {
 
 export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
   onAddXp,
-  masteredVocab,
-  bookmarkedVocab,
+  masteredVocab = [],
+  bookmarkedVocab = [],
   onToggleMaster,
   onToggleBookmark,
 }) => {
+  const safeMastered = masteredVocab || [];
+  const safeBookmarked = bookmarkedVocab || [];
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'flashcards' | 'grid' | 'match_game' | 'srs_deck' | 'custom_notebook'>('flashcards');
@@ -33,8 +35,14 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
 
   // Custom Words state (persisted in localStorage)
   const [customWords, setCustomWords] = useState<VocabWord[]>(() => {
-    const saved = localStorage.getItem('fasaha_custom_vocab');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('fasaha_custom_vocab');
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   });
 
   const [newArWord, setNewArWord] = useState('');
@@ -43,8 +51,14 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
 
   // SRS State
   const [srsItems, setSrsItems] = useState<Record<string, SRSItem>>(() => {
-    const saved = localStorage.getItem('fasaha_srs_data');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('fasaha_srs_data');
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      return typeof parsed === 'object' && parsed !== null ? parsed : {};
+    } catch {
+      return {};
+    }
   });
 
   // Match Game state

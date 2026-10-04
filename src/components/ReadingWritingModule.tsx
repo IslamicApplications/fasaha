@@ -19,9 +19,10 @@ interface ReadingWritingModuleProps {
 
 export const ReadingWritingModule: React.FC<ReadingWritingModuleProps> = ({
   onAddXp,
-  completedReading,
+  completedReading = [],
   onToggleCompleteReading,
 }) => {
+  const safeCompleted = completedReading || [];
   const [activeTab, setActiveTab] = useState<'reading' | 'quranic' | 'connector' | 'dictation' | 'writing_studio'>('reading');
   const [selectedPassage, setSelectedPassage] = useState<ReadingPassage>(READING_PASSAGES[0]);
   const [showTashkeel, setShowTashkeel] = useState(true);
@@ -182,7 +183,7 @@ export const ReadingWritingModule: React.FC<ReadingWritingModuleProps> = ({
                     >
                       {passage.level}
                     </span>
-                    {completedReading.includes(passage.id) && (
+                    {safeCompleted.includes(passage.id) && (
                       <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                     )}
                   </div>

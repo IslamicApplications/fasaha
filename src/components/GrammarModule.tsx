@@ -14,9 +14,10 @@ interface GrammarModuleProps {
 
 export const GrammarModule: React.FC<GrammarModuleProps> = ({
   onAddXp,
-  completedGrammar,
+  completedGrammar = [],
   onToggleCompleteGrammar,
 }) => {
+  const safeCompleted = completedGrammar || [];
   const [selectedLesson, setSelectedLesson] = useState<GrammarLesson>(GRAMMAR_LESSONS[0]);
   const [activeTab, setActiveTab] = useState<'lessons' | 'conjugator'>('lessons');
 
@@ -111,7 +112,7 @@ export const GrammarModule: React.FC<GrammarModuleProps> = ({
 
             {GRAMMAR_LESSONS.map((lesson, idx) => {
               const isSelected = selectedLesson.id === lesson.id;
-              const isDone = completedGrammar.includes(lesson.id);
+              const isDone = safeCompleted.includes(lesson.id);
 
               return (
                 <button

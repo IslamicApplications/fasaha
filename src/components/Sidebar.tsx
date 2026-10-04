@@ -21,7 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       titleAr: 'الأبجدية والأصوات',
       icon: BookOpen,
       color: 'emerald',
-      progress: `${(stats.completedLetters || []).length}/28 Letters`,
+      progress: `${(stats?.completedLetters || []).length}/28 Letters`,
     },
     {
       id: 'vocabulary' as ModuleType,
@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       titleAr: 'المفردات والقواميس',
       icon: Layers,
       color: 'blue',
-      progress: `${(stats.masteredVocab || []).length} Mastered`,
+      progress: `${(stats?.masteredVocab || []).length} Mastered`,
     },
     {
       id: 'reading_writing' as ModuleType,
@@ -39,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       titleAr: 'القراءة والكتابة',
       icon: PenTool,
       color: 'teal',
-      progress: `${(stats.completedReading || []).length} Stories`,
+      progress: `${(stats?.completedReading || []).length} Stories`,
     },
     {
       id: 'morphology' as ModuleType,
@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       titleAr: 'قواعد اللغة',
       icon: Layers,
       color: 'purple',
-      progress: `${(stats.completedGrammar || []).length}/8 Lessons`,
+      progress: `${(stats?.completedGrammar || []).length}/8 Lessons`,
     },
     {
       id: 'conversation' as ModuleType,
@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       titleAr: 'المحادثة والنطق',
       icon: MessageSquare,
       color: 'cyan',
-      progress: `${(stats.completedDialogues || []).length} Dialogues`,
+      progress: `${(stats?.completedDialogues || []).length} Dialogues`,
     },
     {
       id: 'culture' as ModuleType,
