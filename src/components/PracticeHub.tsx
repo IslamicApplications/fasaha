@@ -342,7 +342,7 @@ export const PracticeHub: React.FC<PracticeHubProps> = ({ stats, onAddXp }) => {
               { title: 'Fluent Speaker', desc: 'Tested speech in conversation studio', icon: '🎙️', achieved: (stats.completedDialogues || []).length >= 1 },
               { title: 'Syntax Architect', desc: 'Completed 3 grammar modules', icon: '🏛️', achieved: (stats.completedGrammar || []).length >= 3 },
               { title: 'Heritage Seeker', desc: 'Explored cultural proverbs & styles', icon: '🕌', achieved: true },
-              { title: 'Streak Champion', desc: 'Maintained 3+ days active streak', icon: '🔥', achieved: (stats.streak || 0) >= 1 },
+              { title: 'Streak Champion', desc: 'Maintained 3+ days active streak', icon: '🔥', achieved: (stats.streak || 0) >= 3 },
               { title: 'Fasaha Scholar', desc: 'Earned 500+ XP in total learning', icon: '👑', achieved: (stats.xp || 0) >= 500 },
             ].map((badge, idx) => (
               <div

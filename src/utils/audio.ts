@@ -347,7 +347,7 @@ export async function createArabicSpeechRecognizer(
     }
     if (err === 'network') {
       // Cloud speech server unavailable - fallback gracefully
-      onError('Speech server busy. You can record your voice below for direct acoustic evaluation and playback.');
+      onError('Speech server busy. You can record your voice below for playback comparison.');
       return;
     }
   };
@@ -374,7 +374,6 @@ export function calculateArabicMatchScore(target: string, spoken: string): numbe
   const normSpoken = normalizeArabicText(spoken).toLowerCase();
 
   if (normTarget === normSpoken) return 100;
-  if (normSpoken.includes(normTarget) || normTarget.includes(normSpoken)) return 85;
 
   // Levenshtein distance
   const m = normTarget.length;

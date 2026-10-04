@@ -10,10 +10,11 @@ import { ConversationModule } from './components/ConversationModule';
 import { CultureModule } from './components/CultureModule';
 import { PracticeHub } from './components/PracticeHub';
 import { ModuleType, UserStats } from './types';
+import { recordActivity } from './utils/streak';
 
 const INITIAL_STATS: UserStats = {
   xp: 120,
-  streak: 3,
+  streak: 1,
   lastActiveDate: new Date().toISOString(),
   completedLetters: [1, 2, 3],
   masteredVocab: ['g-1', 'g-2', 'g-3', 'fd-1'],
@@ -37,7 +38,7 @@ export function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return {
+        return recordActivity({
           ...INITIAL_STATS,
           ...parsed,
           completedLetters: Array.isArray(parsed?.completedLetters) ? parsed.completedLetters : INITIAL_STATS.completedLetters,
@@ -47,13 +48,26 @@ export function App() {
           completedGrammar: Array.isArray(parsed?.completedGrammar) ? parsed.completedGrammar : INITIAL_STATS.completedGrammar,
           completedDialogues: Array.isArray(parsed?.completedDialogues) ? parsed.completedDialogues : INITIAL_STATS.completedDialogues,
           unlockedBadges: Array.isArray(parsed?.unlockedBadges) ? parsed.unlockedBadges : INITIAL_STATS.unlockedBadges,
-        };
+        });
       } catch {
-        return INITIAL_STATS;
+        return recordActivity(INITIAL_STATS);
       }
     }
-    return INITIAL_STATS;
+    return recordActivity(INITIAL_STATS);
   });
+
+  // Keep an open tab and returning tabs current when the local day changes.
+  useEffect(() => {
+    const updateActivity = () => {
+      if (document.visibilityState === 'visible') setStats(prev => recordActivity(prev));
+    };
+    const timer = window.setInterval(updateActivity, 60000);
+    document.addEventListener('visibilitychange', updateActivity);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', updateActivity);
+    };
+  }, []);
 
   // Persist stats in localStorage
   useEffect(() => {
@@ -91,7 +105,7 @@ export function App() {
 
   const handleAddXp = (amount: number) => {
     setStats((prev) => ({
-      ...prev,
+      ...recordActivity(prev),
       xp: (prev.xp || 0) + amount,
     }));
   };

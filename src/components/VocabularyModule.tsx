@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Bookmark, Search, CheckCircle, ChevronLeft, ChevronRight, Layers, Gamepad2, BookOpen, Plus, Sparkles, Clock, Calendar } from 'lucide-react';
 import { VOCAB_CATEGORIES, VOCAB_WORDS } from '../data/vocabData';
 import { VocabWord } from '../types';
@@ -26,7 +26,7 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
   const safeBookmarked = bookmarkedVocab || [];
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'flashcards' | 'grid' | 'match_game' | 'srs_deck' | 'custom_notebook'>('flashcards');
+  const [viewMode, setViewMode] = useState<'flashcards' | 'grid' | 'match_game' | 'custom_notebook'>('flashcards');
   
   // Flashcard Deck state
   const [cardIndex, setCardIndex] = useState(0);
@@ -84,22 +84,49 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
     });
   }, [allVocabWords, selectedCategory, searchQuery]);
 
-  const currentWord: VocabWord | undefined = filteredWords[cardIndex] || filteredWords[0];
+  const [reviewTime, setReviewTime] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setReviewTime(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const reviewWords = useMemo(() => filteredWords.filter(word =>
+    !srsItems[word.id] || isDueForReview(srsItems[word.id], reviewTime)
+  ), [filteredWords, srsItems, reviewTime]);
+
+  useEffect(() => {
+    setCardIndex(0);
+    setIsFlipped(false);
+    setGameMatchedIds([]);
+    setGameSelectedArabic(null);
+    setGameSelectedEnglish(null);
+    setGameScore(0);
+  }, [selectedCategory, searchQuery]);
+
+  const reviewIndex = reviewWords.length ? cardIndex % reviewWords.length : 0;
+  const currentWord: VocabWord | undefined = reviewWords[reviewIndex];
 
   const handleNextCard = () => {
     setIsFlipped(false);
-    setCardIndex((prev) => (prev + 1) % filteredWords.length);
+    if (reviewWords.length) setCardIndex((prev) => (prev + 1) % reviewWords.length);
   };
 
   const handlePrevCard = () => {
     setIsFlipped(false);
-    setCardIndex((prev) => (prev - 1 + filteredWords.length) % filteredWords.length);
+    if (reviewWords.length) setCardIndex((prev) => (prev - 1 + reviewWords.length) % reviewWords.length);
   };
 
   const handleFlipCard = () => {
     arabicAudio.playChime('click');
     setIsFlipped(!isFlipped);
   };
+
+  const recallInterval = (grade: SRSGrade) => currentWord ? calculateNextSRS(
+    srsItems[currentWord.id] || {
+      id: currentWord.id, interval: 1, repetition: 0,
+      easinessFactor: 2.5, nextReviewDate: '',
+    }, grade
+  ).interval : 0;
 
   const handleGradeSRS = (grade: SRSGrade) => {
     if (!currentWord) return;
@@ -114,7 +141,7 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
     const nextSRS = calculateNextSRS(currentSRS, grade);
     const updated = { ...srsItems, [currentWord.id]: nextSRS };
     setSrsItems(updated);
-    localStorage.setItem('fasaha_srs_data', JSON.stringify(updated));
+    try { localStorage.setItem('fasaha_srs_data', JSON.stringify(updated)); } catch { /* Keep the session usable if storage is full. */ }
 
     if (grade >= 4) {
       arabicAudio.playChime('celebrate');
@@ -124,7 +151,8 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
       onAddXp(10);
     }
 
-    handleNextCard();
+    setIsFlipped(false);
+    setCardIndex(reviewIndex);
   };
 
   const handleAddCustomWord = (e: React.FormEvent) => {
@@ -311,7 +339,7 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
               <div className="flex items-center justify-between text-xs text-slate-500 font-semibold px-2">
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-blue-500" />
-                  Card {cardIndex + 1} of {filteredWords.length}
+                  Due card {reviewIndex + 1} of {reviewWords.length}
                 </span>
                 <div className="flex items-center gap-3">
                   <button
@@ -426,28 +454,28 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
                       onClick={() => handleGradeSRS(1)}
                       className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 rounded-xl text-xs font-bold transition text-center"
                     >
-                      Again <span className="block text-[10px] font-normal opacity-80">&lt;10m</span>
+                      Again <span className="block text-[10px] font-normal opacity-80">{recallInterval(1)} days</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleGradeSRS(3)}
                       className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 rounded-xl text-xs font-bold transition text-center"
                     >
-                      Hard <span className="block text-[10px] font-normal opacity-80">1 Day</span>
+                      Hard <span className="block text-[10px] font-normal opacity-80">{recallInterval(3)} days</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleGradeSRS(4)}
                       className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 rounded-xl text-xs font-bold transition text-center"
                     >
-                      Good <span className="block text-[10px] font-normal opacity-80">3 Days</span>
+                      Good <span className="block text-[10px] font-normal opacity-80">{recallInterval(4)} days</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleGradeSRS(5)}
                       className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-xl text-xs font-bold transition text-center"
                     >
-                      Easy <span className="block text-[10px] font-normal opacity-80">7 Days</span>
+                      Easy <span className="block text-[10px] font-normal opacity-80">{recallInterval(5)} days</span>
                     </button>
                   </div>
                 </div>
@@ -493,7 +521,7 @@ export const VocabularyModule: React.FC<VocabularyModuleProps> = ({
             </>
           ) : (
             <div className="text-center py-12 text-slate-400">
-              No words found matching your search.
+              {filteredWords.length ? 'All reviews complete. Come back when your next cards are due.' : 'No words found matching your search.'}
             </div>
           )}
         </div>

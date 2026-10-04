@@ -48,7 +48,8 @@ export function calculateNextSRS(item: SRSItem, grade: SRSGrade): SRSItem {
   };
 }
 
-export function isDueForReview(item: SRSItem): boolean {
+export function isDueForReview(item: SRSItem, now = Date.now()): boolean {
   if (!item.nextReviewDate) return true;
-  return new Date(item.nextReviewDate).getTime() <= new Date().getTime();
+  const due = new Date(item.nextReviewDate).getTime();
+  return !Number.isFinite(due) || due <= now;
 }

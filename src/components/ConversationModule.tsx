@@ -5,6 +5,7 @@ import { ConversationDialogue, DialogueLine } from '../types';
 import { AudioPlayerButton } from './AudioPlayerButton';
 import { arabicAudio, createArabicSpeechRecognizer, calculateArabicMatchScore } from '../utils/audio';
 import confetti from 'canvas-confetti';
+import { createSpeechRewardGate } from '../utils/rewards';
 
 interface ConversationModuleProps {
   onAddXp: (amount: number) => void;
@@ -50,12 +51,11 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
     }
   }, []);
 
-  // Audio Recorder & Acoustic Evaluator state
+  // Audio recorder for playback comparison
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recordingStartTimeRef = useRef<number>(0);
 
   // Roleplay mode state
   const [roleplayMode, setRoleplayMode] = useState<boolean>(false);
@@ -90,6 +90,7 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
       }
     }
 
+    const shouldReward = createSpeechRewardGate();
     const rec = await createArabicSpeechRecognizer(
       (transcript, isFinal) => {
         setSpeechTranscript(transcript);
@@ -97,7 +98,7 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
         const score = calculateArabicMatchScore(line.arabic, transcript);
         setSpeechScore(score);
 
-        if (score >= 60) {
+        if (shouldReward(score, isFinal)) {
           arabicAudio.playChime('celebrate');
           onAddXp(25);
           confetti({ particleCount: 60, spread: 50 });
@@ -117,8 +118,11 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
       try {
         rec.start();
       } catch (e) {
-        console.warn('Speech rec start error:', e);
+        setIsListening(false);
+        setSpeechStatus('Unable to start speech recognition. Try again.');
       }
+    } else {
+      setIsListening(false);
     }
   };
 
@@ -134,11 +138,10 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
     setSpeechStatus('Listening paused.');
   };
 
-  // Direct Audio Recording via MediaRecorder for playback comparison & acoustic scoring
+  // Direct Audio Recording via MediaRecorder for playback comparison
   const handleStartVoiceRecording = async () => {
     try {
       audioChunksRef.current = [];
-      recordingStartTimeRef.current = Date.now();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
@@ -150,23 +153,13 @@ export const ConversationModule: React.FC<ConversationModuleProps> = ({
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType });
         const url = URL.createObjectURL(blob);
         setRecordedAudioUrl(url);
         stream.getTracks().forEach(t => t.stop());
 
-        // Acoustic cadence and duration evaluation
-        const durationSec = (Date.now() - recordingStartTimeRef.current) / 1000;
-        if (durationSec >= 0.8) {
-          const generatedScore = Math.min(98, 85 + Math.floor(Math.random() * 12));
-          setSpeechScore(generatedScore);
-          setSpeechStatus(`Recorded successfully! Acoustic match: ${generatedScore}%`);
-          arabicAudio.playChime('celebrate');
-          onAddXp(25);
-          confetti({ particleCount: 50, spread: 60 });
-        } else {
-          setSpeechStatus('Recording was too short. Try speaking the full phrase.');
-        }
+        setSpeechScore(null);
+        setSpeechStatus('Recording ready. Listen and compare with the example. Use speech recognition to check accuracy.');
       };
 
       recorder.start();

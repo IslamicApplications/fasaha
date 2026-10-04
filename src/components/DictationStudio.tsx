@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Headphones, Volume2, Sparkles, CheckCircle2, RotateCcw, Award } from 'lucide-react';
 import { VirtualKeyboard } from './VirtualKeyboard';
 import { arabicAudio, calculateArabicMatchScore, normalizeArabicText } from '../utils/audio';
@@ -31,6 +31,8 @@ export const DictationStudio: React.FC<DictationStudioProps> = ({ onAddXp }) => 
   const [evaluatedScore, setEvaluatedScore] = useState<number | null>(null);
   const [showHint, setShowHint] = useState(false);
 
+  const rewardedItems = useRef(new Set<string>());
+
   const currentItem = DICTATION_BANK[currentIndex];
 
   useEffect(() => {
@@ -44,12 +46,16 @@ export const DictationStudio: React.FC<DictationStudioProps> = ({ onAddXp }) => 
   };
 
   const handleEvaluate = () => {
+    if (!normalizeArabicText(typedInput)) return;
     const score = calculateArabicMatchScore(currentItem.arabic, typedInput);
     setEvaluatedScore(score);
 
     if (score >= 80) {
       arabicAudio.playChime('celebrate');
-      onAddXp(25);
+      if (!rewardedItems.current.has(currentItem.id)) {
+        rewardedItems.current.add(currentItem.id);
+        onAddXp(25);
+      }
       confetti({ particleCount: 70, spread: 60 });
     } else {
       arabicAudio.playChime('correct');
